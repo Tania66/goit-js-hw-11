@@ -18,51 +18,70 @@ const loader = document.querySelector('.load-more');
 
 
 const pixabayApiServise = new PixabayApiServise();
-
+loader.classList.add('is-hidden');
 
 form.addEventListener('submit', onSearch);
 loader.addEventListener('click', onLoading);
 
 
 
- function onSearch(event) {
+ async function onSearch(event) {
   event.preventDefault();
-
+  clearGalleryContainer(); 
   pixabayApiServise.q = event.currentTarget.elements.searchQuery.value.trim();
 
 
-if (pixabayApiServise.q ==='') {
-  return Notify.failure(
-    'Sorry, there are no images matching your search query. Please try again.'
-  );
-}
+if (!pixabayApiServise.q) {
+  Notify.failure(
+    'Sorry, there are no images matching your search query. Please try again.');
+    loader.classList.add('is-hidden');
+   return;  
+};
+
 
 pixabayApiServise.resetPage();
 
-pixabayApiServise.fechPixabayApi().then(hits => {
-clearGalleryContainer(); 
- appendHitsMarkup(hits);
- if (!hits.length) {
-  return Notify.failure(
-    'Sorry, there are no images matching your search query. Please try again.'
-  );
- }
-});
-lightbox.refresh();
+try {
+  const hits = await pixabayApiServise.fechPixabayApi();
+
+   appendHitsMarkup(hits);
+
 loader.classList.remove('is-hidden');
 
+        if (pixabayApiServise.totalImages){
+            Notify.success(`Hooray! We found ${pixabayApiServise.totalImages} images.`);
+          }
+        else if (pixabayApiServise.totalImages < pixabayApiServise.perPage){
+        loader.classList.add('is-hidden');
+       } else {
+          Notify.failure("Sorry, nothing was found for your request");
+                  loader.classList.add('is-hidden');
+        return;
+       }
+
+} catch (error) {
+  console.log(error);
+}
+lightbox.refresh();
 
 }
 
 
-function onLoading(){
-  pixabayApiServise.fechPixabayApi().then(appendHitsMarkup);
-  lightbox.refresh();
- const result = pixabayApiServise.fechPixabayApi();
-let {totalHits} = result;
- console.log(totalHits);
+async function onLoading(){
+ try {
+  const hits = await pixabayApiServise.fechPixabayApi();
+  appendHitsMarkup(hits);
+  if (pixabayApiServise.page > pixabayApiServise.totalPages) {
+    Notify.failure("We're sorry, but you've reached the end of search results.");
+   loader.classList.add("is-hidden");
+ 
+  }
+ } catch (error) {
+  console.log(error);
+ }
 
 }
+
 
 
 
